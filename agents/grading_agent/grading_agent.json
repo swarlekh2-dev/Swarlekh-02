@@ -1,0 +1,26 @@
+{
+  "name": "grading_agent",
+  "description": "Question-type-aware AI grader. Reads a question and a student's answer, produces a score and short feedback, and hands the write off to record_grade so exam-level grading policy (manual/AI/hybrid) is enforced consistently.",
+  "instruction": {"$file": "instruction.md"},
+  "toolsets": ["POD"],
+  "visibility": "POD",
+  "permissions": {
+    "grants": [
+      {
+        "resource_type": "function",
+        "resource_name": "record_grade",
+        "permission_ids": ["function.read", "function.execute"]
+      },
+      {
+        "resource_type": "datastore_table",
+        "resource_name": "questions",
+        "permission_ids": ["datastore.table.read", "datastore.record.read"]
+      },
+      {
+        "resource_type": "datastore_table",
+        "resource_name": "student_answers",
+        "permission_ids": ["datastore.table.read", "datastore.record.read"]
+      }
+    ]
+  }
+}

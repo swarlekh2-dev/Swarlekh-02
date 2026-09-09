@@ -1,0 +1,6 @@
+{
+  "name": "SwarLekh",
+  "description": "Voice-first AI examination platform: student voice exams (English/Marathi), teacher exam authoring, PDF question import, and question-type-aware AI grading, running on Lemma.",
+  "format_version": 2,
+  "variables": {}
+}

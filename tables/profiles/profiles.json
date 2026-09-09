@@ -1,0 +1,39 @@
+{
+  "name": "profiles",
+  "primary_key_column": "id",
+  "enable_rls": true,
+  "columns": [
+    {
+      "name": "id",
+      "type": "UUID",
+      "required": true,
+      "auto": true
+    },
+    {
+      "name": "name",
+      "type": "TEXT",
+      "required": true
+    },
+    {
+      "name": "email",
+      "type": "TEXT",
+      "required": true,
+      "unique": true
+    },
+    {
+      "name": "role",
+      "type": "ENUM",
+      "required": true,
+      "options": [
+        "student",
+        "teacher",
+        "admin"
+      ]
+    },
+    {
+      "name": "institution",
+      "type": "TEXT",
+      "required": false
+    }
+  ]
+}

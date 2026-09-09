@@ -1,0 +1,7 @@
+{
+  "name": "extract_pdf_questions",
+  "description": "Splits already-extracted question-paper text into individual questions with a best-guess type and a confidence flag. Does not touch the database and never publishes anything — it only returns a review list for the teacher (spec section 15: 'Do NOT automatically publish extracted questions'). PDF-to-text extraction itself happens on the frontend/upload step before this is called; see ROADMAP.md.",
+  "code": {"$file": "code.py"},
+  "visibility": "POD",
+  "permissions": {"grants": []}
+}

@@ -1,0 +1,11 @@
+{
+  "name": "trial_tests",
+  "primary_key_column": "id",
+  "enable_rls": false,
+  "columns": [
+    {"name": "id", "type": "UUID", "required": true, "auto": true},
+    {"name": "title", "type": "TEXT", "required": true, "default": "Practice Test"},
+    {"name": "description", "type": "TEXT", "required": false},
+    {"name": "questions", "type": "JSON", "required": true, "description": "Fixed demo question set covering every supported question type"}
+  ]
+}

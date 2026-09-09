@@ -1,0 +1,30 @@
+{
+  "name": "record_grade",
+  "description": "Deterministic write-path for grading. Respects the exam's grading_configs.mode: in manual mode it refuses to write an AI score; in ai/hybrid mode it writes ai_score/ai_feedback and, for ai mode only, also sets final_score. Never overwrites an existing teacher-entered manual_score.",
+  "code": {"$file": "code.py"},
+  "visibility": "POD",
+  "permissions": {
+    "grants": [
+      {
+        "resource_type": "datastore_table",
+        "resource_name": "student_answers",
+        "permission_ids": ["datastore.table.read", "datastore.record.read", "datastore.record.write"]
+      },
+      {
+        "resource_type": "datastore_table",
+        "resource_name": "questions",
+        "permission_ids": ["datastore.table.read", "datastore.record.read"]
+      },
+      {
+        "resource_type": "datastore_table",
+        "resource_name": "exam_sessions",
+        "permission_ids": ["datastore.table.read", "datastore.record.read"]
+      },
+      {
+        "resource_type": "datastore_table",
+        "resource_name": "grading_configs",
+        "permission_ids": ["datastore.table.read", "datastore.record.read"]
+      }
+    ]
+  }
+}

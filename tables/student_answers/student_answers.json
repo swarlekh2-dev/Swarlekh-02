@@ -1,0 +1,76 @@
+{
+  "name": "student_answers",
+  "primary_key_column": "id",
+  "enable_rls": true,
+  "columns": [
+    {
+      "name": "id",
+      "type": "UUID",
+      "required": true,
+      "auto": true
+    },
+    {
+      "name": "session_id",
+      "type": "UUID",
+      "required": true,
+      "foreign_key": {
+        "references": "exam_sessions.id"
+      }
+    },
+    {
+      "name": "question_id",
+      "type": "UUID",
+      "required": true,
+      "foreign_key": {
+        "references": "questions.id"
+      }
+    },
+    {
+      "name": "answer_text",
+      "type": "TEXT",
+      "required": false,
+      "description": "Selected option / transcript / typed answer"
+    },
+    {
+      "name": "answer_state",
+      "type": "ENUM",
+      "required": false,
+      "default": "unanswered",
+      "options": [
+        "unanswered",
+        "answered",
+        "skipped"
+      ]
+    },
+    {
+      "name": "ai_score",
+      "type": "FLOAT",
+      "required": false
+    },
+    {
+      "name": "ai_feedback",
+      "type": "TEXT",
+      "required": false
+    },
+    {
+      "name": "manual_score",
+      "type": "FLOAT",
+      "required": false
+    },
+    {
+      "name": "final_score",
+      "type": "FLOAT",
+      "required": false
+    },
+    {
+      "name": "teacher_feedback",
+      "type": "TEXT",
+      "required": false
+    },
+    {
+      "name": "autosaved_at",
+      "type": "DATETIME",
+      "required": false
+    }
+  ]
+}

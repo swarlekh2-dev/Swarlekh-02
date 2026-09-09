@@ -1,0 +1,39 @@
+{
+  "name": "grading_configs",
+  "primary_key_column": "id",
+  "enable_rls": true,
+  "columns": [
+    {
+      "name": "id",
+      "type": "UUID",
+      "required": true,
+      "auto": true
+    },
+    {
+      "name": "exam_id",
+      "type": "UUID",
+      "required": true,
+      "foreign_key": {
+        "references": "exams.id"
+      },
+      "unique": true
+    },
+    {
+      "name": "mode",
+      "type": "ENUM",
+      "required": true,
+      "default": "manual",
+      "options": [
+        "ai",
+        "manual",
+        "hybrid"
+      ]
+    },
+    {
+      "name": "ai_feedback_enabled",
+      "type": "BOOLEAN",
+      "required": false,
+      "default": false
+    }
+  ]
+}

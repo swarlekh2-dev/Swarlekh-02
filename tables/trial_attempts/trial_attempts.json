@@ -1,0 +1,39 @@
+{
+  "name": "trial_attempts",
+  "primary_key_column": "id",
+  "enable_rls": true,
+  "columns": [
+    {
+      "name": "id",
+      "type": "UUID",
+      "required": true,
+      "auto": true
+    },
+    {
+      "name": "trial_test_id",
+      "type": "UUID",
+      "required": true,
+      "foreign_key": {
+        "references": "trial_tests.id"
+      }
+    },
+    {
+      "name": "student_id",
+      "type": "UUID",
+      "required": true,
+      "foreign_key": {
+        "references": "profiles.id"
+      }
+    },
+    {
+      "name": "answers",
+      "type": "JSON",
+      "required": false
+    },
+    {
+      "name": "completed_at",
+      "type": "DATETIME",
+      "required": false
+    }
+  ]
+}

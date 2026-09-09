@@ -1,0 +1,78 @@
+{
+  "name": "exams",
+  "primary_key_column": "id",
+  "enable_rls": true,
+  "columns": [
+    {
+      "name": "id",
+      "type": "UUID",
+      "required": true,
+      "auto": true
+    },
+    {
+      "name": "teacher_id",
+      "type": "UUID",
+      "required": true,
+      "foreign_key": {
+        "references": "profiles.id"
+      }
+    },
+    {
+      "name": "title",
+      "type": "TEXT",
+      "required": true
+    },
+    {
+      "name": "subject",
+      "type": "TEXT",
+      "required": false
+    },
+    {
+      "name": "institution",
+      "type": "TEXT",
+      "required": false
+    },
+    {
+      "name": "instructions",
+      "type": "TEXT",
+      "required": false
+    },
+    {
+      "name": "duration_minutes",
+      "type": "INTEGER",
+      "required": false,
+      "default": 60
+    },
+    {
+      "name": "timer_enabled",
+      "type": "BOOLEAN",
+      "required": false,
+      "default": true
+    },
+    {
+      "name": "session_code",
+      "type": "TEXT",
+      "required": false,
+      "unique": true
+    },
+    {
+      "name": "status",
+      "type": "ENUM",
+      "required": true,
+      "default": "draft",
+      "options": [
+        "draft",
+        "review",
+        "published",
+        "active",
+        "completed",
+        "archived"
+      ]
+    },
+    {
+      "name": "pdf_url",
+      "type": "FILE_PATH",
+      "required": false
+    }
+  ]
+}

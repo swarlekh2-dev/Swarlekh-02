@@ -1,0 +1,63 @@
+{
+  "name": "exam_sessions",
+  "primary_key_column": "id",
+  "enable_rls": true,
+  "columns": [
+    {
+      "name": "id",
+      "type": "UUID",
+      "required": true,
+      "auto": true
+    },
+    {
+      "name": "exam_id",
+      "type": "UUID",
+      "required": true,
+      "foreign_key": {
+        "references": "exams.id"
+      }
+    },
+    {
+      "name": "student_id",
+      "type": "UUID",
+      "required": true,
+      "foreign_key": {
+        "references": "profiles.id"
+      }
+    },
+    {
+      "name": "status",
+      "type": "ENUM",
+      "required": true,
+      "default": "not_started",
+      "options": [
+        "not_started",
+        "in_progress",
+        "time_expired",
+        "auto_submitted",
+        "submitted"
+      ]
+    },
+    {
+      "name": "current_question_index",
+      "type": "INTEGER",
+      "required": false,
+      "default": 0
+    },
+    {
+      "name": "started_at",
+      "type": "DATETIME",
+      "required": false
+    },
+    {
+      "name": "submitted_at",
+      "type": "DATETIME",
+      "required": false
+    },
+    {
+      "name": "last_autosave_at",
+      "type": "DATETIME",
+      "required": false
+    }
+  ]
+}

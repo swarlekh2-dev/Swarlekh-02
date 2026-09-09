@@ -1,0 +1,53 @@
+{
+  "name": "results",
+  "primary_key_column": "id",
+  "enable_rls": true,
+  "columns": [
+    {
+      "name": "id",
+      "type": "UUID",
+      "required": true,
+      "auto": true
+    },
+    {
+      "name": "session_id",
+      "type": "UUID",
+      "required": true,
+      "foreign_key": {
+        "references": "exam_sessions.id"
+      },
+      "unique": true
+    },
+    {
+      "name": "total_marks",
+      "type": "FLOAT",
+      "required": true
+    },
+    {
+      "name": "obtained_marks",
+      "type": "FLOAT",
+      "required": true
+    },
+    {
+      "name": "percentage",
+      "type": "FLOAT",
+      "required": false
+    },
+    {
+      "name": "grading_mode",
+      "type": "ENUM",
+      "required": false,
+      "options": [
+        "ai",
+        "manual",
+        "hybrid"
+      ]
+    },
+    {
+      "name": "visible_to_student",
+      "type": "BOOLEAN",
+      "required": false,
+      "default": false
+    }
+  ]
+}

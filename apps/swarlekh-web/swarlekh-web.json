@@ -1,0 +1,5 @@
+{
+  "name": "swarlekh-web",
+  "description": "SwarLekh student/teacher/admin web app (React + Vite + TS + Tailwind). Existing UI carried over as-is; still reads/writes Supabase directly — see ROADMAP.md for the phase that switches it to Lemma tables/functions.",
+  "visibility": "POD"
+}

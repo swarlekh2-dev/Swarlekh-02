@@ -1,0 +1,128 @@
+{
+  "name": "questions",
+  "primary_key_column": "id",
+  "enable_rls": true,
+  "columns": [
+    {
+      "name": "id",
+      "type": "UUID",
+      "required": true,
+      "auto": true
+    },
+    {
+      "name": "exam_id",
+      "type": "UUID",
+      "required": false,
+      "foreign_key": {
+        "references": "exams.id"
+      },
+      "description": "Null when the question lives only in the reusable question bank"
+    },
+    {
+      "name": "teacher_id",
+      "type": "UUID",
+      "required": true,
+      "foreign_key": {
+        "references": "profiles.id"
+      }
+    },
+    {
+      "name": "type",
+      "type": "ENUM",
+      "required": true,
+      "options": [
+        "mcq",
+        "fill_blank",
+        "true_false",
+        "one_word",
+        "one_sentence",
+        "short_answer",
+        "descriptive",
+        "essay",
+        "odd_one_out",
+        "matching",
+        "custom"
+      ]
+    },
+    {
+      "name": "text",
+      "type": "TEXT",
+      "required": true
+    },
+    {
+      "name": "language",
+      "type": "ENUM",
+      "required": false,
+      "default": "en",
+      "options": [
+        "en",
+        "mr"
+      ]
+    },
+    {
+      "name": "marks",
+      "type": "FLOAT",
+      "required": true,
+      "default": 1
+    },
+    {
+      "name": "options",
+      "type": "JSON",
+      "required": false,
+      "description": "MCQ/odd-one-out/matching options, e.g. [\"Apple\",\"Mango\",...]"
+    },
+    {
+      "name": "correct_answer",
+      "type": "JSON",
+      "required": false,
+      "description": "Correct option / accepted answers list, e.g. [\"Mumbai\",\"Bombay\"]"
+    },
+    {
+      "name": "model_answer",
+      "type": "TEXT",
+      "required": false
+    },
+    {
+      "name": "keywords",
+      "type": "JSON",
+      "required": false,
+      "description": "Array of grading keywords for descriptive/short-answer questions"
+    },
+    {
+      "name": "explanation",
+      "type": "TEXT",
+      "required": false
+    },
+    {
+      "name": "difficulty",
+      "type": "ENUM",
+      "required": false,
+      "options": [
+        "easy",
+        "medium",
+        "hard"
+      ]
+    },
+    {
+      "name": "order_index",
+      "type": "INTEGER",
+      "required": false
+    },
+    {
+      "name": "time_limit_seconds",
+      "type": "INTEGER",
+      "required": false
+    },
+    {
+      "name": "required",
+      "type": "BOOLEAN",
+      "required": false,
+      "default": true
+    },
+    {
+      "name": "metadata",
+      "type": "JSON",
+      "required": false
+    }
+  ]
+}

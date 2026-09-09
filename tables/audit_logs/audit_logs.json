@@ -1,0 +1,42 @@
+{
+  "name": "audit_logs",
+  "primary_key_column": "id",
+  "enable_rls": true,
+  "columns": [
+    {
+      "name": "id",
+      "type": "UUID",
+      "required": true,
+      "auto": true
+    },
+    {
+      "name": "actor_id",
+      "type": "UUID",
+      "required": false,
+      "foreign_key": {
+        "references": "profiles.id"
+      }
+    },
+    {
+      "name": "action",
+      "type": "TEXT",
+      "required": true,
+      "description": "e.g. exam.published, grading.override, answer.autosaved"
+    },
+    {
+      "name": "resource_type",
+      "type": "TEXT",
+      "required": false
+    },
+    {
+      "name": "resource_id",
+      "type": "UUID",
+      "required": false
+    },
+    {
+      "name": "details",
+      "type": "JSON",
+      "required": false
+    }
+  ]
+}
