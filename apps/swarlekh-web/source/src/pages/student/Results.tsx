@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { supabase } from '../../lib/supabase'
+import { supabase, areResultsVisible } from '../../lib/supabase'
 import { useNavigate } from 'react-router-dom'
-import { ClipboardList, Clock, CheckCircle, BookOpen, ChevronDown, ChevronUp } from 'lucide-react'
+import { ClipboardList, Clock, CheckCircle, BookOpen, ChevronDown, ChevronUp, Hourglass, Award } from 'lucide-react'
 import Layout from '../../components/layout/Layout'
 
 export default function Results() {
@@ -94,6 +94,22 @@ export default function Results() {
                           ✓ Submitted: {new Date(session.submitted_at).toLocaleString()}
                         </div>
                       )}
+                      {session.status === 'submitted' && (
+                        areResultsVisible(session.exam) ? (
+                          <div className="flex items-center gap-1.5 mt-2 text-sm font-semibold text-blue-700">
+                            <Award size={15} />
+                            Score: {
+                              (session.exam?.questions || []).reduce(
+                                (sum: number, q: any) => sum + (session.grading?.[q.id]?.final_score ?? 0), 0)
+                            } / {(session.exam?.questions || []).reduce((sum: number, q: any) => sum + (q.marks || 0), 0)}
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 mt-2 text-xs text-amber-600">
+                            <Hourglass size={13} />
+                            Results not published yet — your teacher is still reviewing
+                          </div>
+                        )
+                      )}
                     </div>
                     <div className="flex items-center gap-2 ml-4">
                       {session.status === 'in_progress' && (
@@ -133,35 +149,49 @@ export default function Results() {
                   )}
 
                   {/* Per-question grading detail */}
-                  {expandedId === session.id && (
-                    <div className="mt-3 pt-3 border-t border-gray-100 space-y-3">
-                      {(session.exam?.questions || []).map((q: any, i: number) => {
-                        const g = session.grading?.[q.id] || {}
-                        const hasScore = g.final_score !== undefined && g.final_score !== null
-                        return (
-                          <div key={i} className="bg-gray-50 rounded-lg p-3">
-                            <div className="flex items-center justify-between mb-1">
-                              <div className="text-sm font-medium text-gray-700">Q{i+1}: {q.question}</div>
-                              <span className="text-xs font-semibold text-gray-600 flex-shrink-0 ml-2">
-                                {hasScore ? `${g.final_score}/${q.marks}` : 'Not graded yet'}
-                              </span>
-                            </div>
-                            <div className="text-sm text-gray-600 mb-1">{session.answers?.[q.id] || 'No answer'}</div>
-                            {g.teacher_remarks && (
-                              <div className="text-xs text-blue-700 bg-blue-50 rounded p-2 mt-1">
-                                <span className="font-medium">Teacher: </span>{g.teacher_remarks}
-                              </div>
-                            )}
-                            {g.ai_feedback && (
-                              <div className="text-xs text-purple-700 bg-purple-50 rounded p-2 mt-1">
-                                <span className="font-medium">AI feedback: </span>{g.ai_feedback}
-                              </div>
-                            )}
+                  {expandedId === session.id && (() => {
+                    const published = areResultsVisible(session.exam)
+                    return (
+                      <div className="mt-3 pt-3 border-t border-gray-100 space-y-3">
+                        {!published && (
+                          <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+                            <Hourglass size={14} className="flex-shrink-0 mt-0.5" />
+                            <span>
+                              Your answers were recorded successfully. Scores and feedback will appear here once your
+                              teacher publishes the results for this exam.
+                            </span>
                           </div>
-                        )
-                      })}
-                    </div>
-                  )}
+                        )}
+                        {(session.exam?.questions || []).map((q: any, i: number) => {
+                          const g = session.grading?.[q.id] || {}
+                          const hasScore = g.final_score !== undefined && g.final_score !== null
+                          return (
+                            <div key={i} className="bg-gray-50 rounded-lg p-3">
+                              <div className="flex items-center justify-between mb-1">
+                                <div className="text-sm font-medium text-gray-700">Q{i+1}: {q.question}</div>
+                                {published && (
+                                  <span className="text-xs font-semibold text-gray-600 flex-shrink-0 ml-2">
+                                    {hasScore ? `${g.final_score}/${q.marks}` : 'Not graded'}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-sm text-gray-600 mb-1">{session.answers?.[q.id] || 'No answer'}</div>
+                              {published && g.teacher_remarks && (
+                                <div className="text-xs text-blue-700 bg-blue-50 rounded p-2 mt-1">
+                                  <span className="font-medium">Teacher: </span>{g.teacher_remarks}
+                                </div>
+                              )}
+                              {published && g.ai_feedback && (
+                                <div className="text-xs text-purple-700 bg-purple-50 rounded p-2 mt-1">
+                                  <span className="font-medium">AI feedback: </span>{g.ai_feedback}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  })()}
                 </div>
               ))}
             </div>
