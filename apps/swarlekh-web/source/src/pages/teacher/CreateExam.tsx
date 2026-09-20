@@ -27,7 +27,7 @@ export default function CreateExam() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const [pdfFile, setPdfFile] = useState<File | null>(null)
-  const [form, setForm] = useState({ title:'', subject:'', exam_type:'College Exam', duration_minutes:60, grading_mode:'manual' as GradingMode })
+  const [form, setForm] = useState({ title:'', subject:'', exam_type:'College Exam', duration_minutes:60, grading_mode:'manual' as GradingMode, auto_publish_ai:false })
   const [questions, setQuestions] = useState<Partial<Question>[]>([
     { type:'descriptive', question:'', marks:10, options:[] }
   ])
@@ -77,6 +77,10 @@ export default function CreateExam() {
       questions: questions.map((q, i) => ({...q, id: `q-${i+1}`})),
       pdf_url,
       grading_mode: form.grading_mode,
+      // Results stay hidden from students until the teacher publishes, unless
+      // this is an AI/hybrid exam and the teacher opted into instant release.
+      results_published: false,
+      auto_publish_ai: form.grading_mode === 'manual' ? false : form.auto_publish_ai,
     }
 
     const { error } = await supabase.from('exams').insert(examData)
@@ -145,6 +149,30 @@ export default function CreateExam() {
                     <span>AI/Hybrid grading only produces scores once the Lemma grading agent is wired in and running. Until then, answers will show as "not graded yet" — grade manually from Submissions in the meantime.</span>
                   </div>
                 )}
+
+                {/* Results release. Manual exams always wait for the teacher. */}
+                <div className="mt-3 p-3 rounded-xl border border-gray-200 bg-gray-50">
+                  <div className="text-sm font-medium text-gray-700 mb-1">Releasing results to students</div>
+                  {form.grading_mode === 'manual' ? (
+                    <p className="text-xs text-gray-500">
+                      Students will see their answers but no scores until you grade every submission and press
+                      <span className="font-medium text-gray-700"> Publish Results </span>
+                      on the Submissions page.
+                    </p>
+                  ) : (
+                    <label className="flex items-start gap-2 cursor-pointer">
+                      <input type="checkbox" className="mt-0.5"
+                        checked={form.auto_publish_ai}
+                        onChange={e => setForm(f => ({...f, auto_publish_ai: e.target.checked}))} />
+                      <span className="text-xs text-gray-600">
+                        Show the AI score to each student as soon as their exam is graded.
+                        <span className="block text-gray-400 mt-0.5">
+                          Leave unchecked to review the AI scores yourself first — results then stay hidden until you press Publish Results.
+                        </span>
+                      </span>
+                    </label>
+                  )}
+                </div>
               </div>
             </div>
           </div>
