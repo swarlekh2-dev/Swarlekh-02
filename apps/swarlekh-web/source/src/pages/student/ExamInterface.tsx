@@ -2,23 +2,11 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase, ExamSession, Exam, Question } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import { Mic, MicOff, Volume2, ChevronLeft, ChevronRight, Trash2, RotateCcw, Send, AlertTriangle, Keyboard } from 'lucide-react'
+import { Mic, MicOff, Volume2, ChevronLeft, ChevronRight, Trash2, RotateCcw, Send, AlertTriangle, Keyboard, Eraser, Languages, Square } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { LANGUAGES, getSavedLanguage, saveLanguage, speak, speakSentences, stopSpeaking, splitSentences } from '../../lib/language'
 
-// TTS Helper
-const speak = (text: string, lang = 'mr-IN') => {
-  if (!('speechSynthesis' in window)) return
-  window.speechSynthesis.cancel()
-  const u = new SpeechSynthesisUtterance(text)
-  u.lang = lang
-  u.rate = 0.85
-  u.pitch = 1.0
-  const voices = window.speechSynthesis.getVoices()
-  const marathi = voices.find(v => v.lang === 'mr-IN')
-  const english = voices.find(v => v.lang === 'en-IN' || v.lang.startsWith('en'))
-  u.voice = marathi || english || voices[0] || null
-  window.speechSynthesis.speak(u)
-}
+// (TTS helper `speak` now lives in ../../lib/language so the chosen main language applies everywhere)
 
 export default function ExamInterface() {
   const { sessionId } = useParams()
@@ -36,9 +24,14 @@ export default function ExamInterface() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [tabWarnings, setTabWarnings] = useState(0)
+  const [lang, setLang] = useState<string>(getSavedLanguage())
+  const [readingIdx, setReadingIdx] = useState<number | null>(null)
   const recognitionRef = useRef<any>(null)
   const timerRef = useRef<any>(null)
   const autoSaveRef = useRef<any>(null)
+  // Always points at the latest render's handler, so speech callbacks never see stale answers.
+  const onFinalRef = useRef<(text: string) => void>(() => {})
+  const readTokenRef = useRef(0)
 
   useEffect(() => { fetchSession() }, [sessionId])
 
@@ -121,27 +114,78 @@ export default function ExamInterface() {
     setSentenceBuffers(b => ({ ...b, [qId]: buffer }))
   }
 
+  // ---- Erase last word (button + voice command) ----
+  const eraseLastWord = (qId: string) => {
+    if (inputMode === 'keyboard') {
+      const text = (answers[qId] || '').replace(/\s+$/, '')
+      const m = text.match(/(\S+)$/)
+      if (!m) { speak('Nothing to remove'); return }
+      const next = text.slice(0, text.length - m[1].length).replace(/[ \t]+$/, '')
+      updateAnswer(qId, next, next.split('\n').filter(Boolean))
+      speak(`Removed word: ${m[1]}`)
+      toast.success('Last word removed')
+      return
+    }
+    const buf = [...(sentenceBuffers[qId] || [])]
+    if (buf.length > 0) {
+      const words = buf[buf.length - 1].trim().split(/\s+/)
+      const removedWord = words.pop()
+      if (words.length > 0) buf[buf.length - 1] = words.join(' ')
+      else buf.pop()
+      updateAnswer(qId, buf.join('. '), buf)
+      speak(removedWord ? `Removed word: ${removedWord}` : 'Nothing to remove')
+      toast.success('Last word removed')
+    } else {
+      speak('Nothing to remove')
+    }
+  }
+
+  // ---- Read answer sentence by sentence ----
+  const stopReading = () => {
+    readTokenRef.current++
+    stopSpeaking()
+    setReadingIdx(null)
+  }
+
+  // index = 0-based sentence number; -1 means the last sentence
+  const readSentenceAt = (qId: string, index: number) => {
+    const list = splitSentences(answers[qId] || '')
+    if (list.length === 0) { speak('No answer yet'); return }
+    const i = index < 0 ? list.length + index : index
+    if (i < 0 || i >= list.length) { speak(`There is no sentence number ${index + 1}`); return }
+    const token = ++readTokenRef.current
+    speakSentences([list[i]],
+      () => { if (token === readTokenRef.current) setReadingIdx(i) },
+      () => { if (token === readTokenRef.current) setReadingIdx(null) })
+  }
+
+  const readAllSentences = (qId: string) => {
+    const list = splitSentences(answers[qId] || '')
+    if (list.length === 0) { speak('No answer yet'); return }
+    const token = ++readTokenRef.current
+    speakSentences(list,
+      i => { if (token === readTokenRef.current) setReadingIdx(i) },
+      () => { if (token === readTokenRef.current) setReadingIdx(null) })
+  }
+
+  const changeLanguage = (code: string) => {
+    const wasRecording = isRecording
+    stopRecording()
+    stopReading()
+    saveLanguage(code)
+    setLang(code)
+    const l = LANGUAGES.find(x => x.code === code)
+    toast.success(`Main language: ${l?.native} (${l?.label})${wasRecording ? ' — tap the mic to continue' : ''}`)
+    setTimeout(() => speak(`Language changed to ${l?.label}`, code), 200)
+  }
+
   // Voice Commands
   const handleVoiceCommand = (transcript: string, qId: string): boolean => {
     const t = transcript.toLowerCase().trim()
 
     // ERASE WORD - remove only the last word of the last spoken sentence
-    if (t.includes('erase word') || t.includes('शब्द काढ') || t.includes('delete word')) {
-      const buf = [...getCurrentBuffer()]
-      if (buf.length > 0) {
-        const words = buf[buf.length - 1].trim().split(/\s+/)
-        const removedWord = words.pop()
-        if (words.length > 0) {
-          buf[buf.length - 1] = words.join(' ')
-        } else {
-          buf.pop()
-        }
-        updateAnswer(qId, buf.join('. '), buf)
-        speak(removedWord ? `Removed word: ${removedWord}` : 'Nothing to remove')
-        toast.success('Last word removed')
-      } else {
-        speak('Nothing to remove')
-      }
+    if (t.includes('erase word') || t.includes('शब्द काढ') || t.includes('शब्द हटा') || t.includes('delete word')) {
+      eraseLastWord(qId)
       return true
     }
 
@@ -178,6 +222,19 @@ export default function ExamInterface() {
       toast.success('Answer cleared')
       return true
     }
+
+    // READ LAST SENTENCE / READ SENTENCE N / SENTENCE BY SENTENCE
+    if (t.includes('read last sentence') || t.includes('शेवटचं वाक्य') || t.includes('शेवटचे वाक्य')) {
+      readSentenceAt(qId, -1)
+      return true
+    }
+    const sentNum = t.match(/read sentence\s*(\d+)/)
+    if (sentNum) { readSentenceAt(qId, parseInt(sentNum[1], 10) - 1); return true }
+    if (t.includes('sentence by sentence') || t.includes('read sentences') || t.includes('वाक्य वाच')) {
+      readAllSentences(qId)
+      return true
+    }
+    if (t === 'stop' || t.includes('stop reading')) { stopReading(); return true }
 
     // READ BACK last 2
     if (t.includes('read back') || t.includes('पुन्हा वाच') || t.includes('repeat')) {
@@ -229,11 +286,24 @@ export default function ExamInterface() {
     return false
   }
 
+  // Re-assigned on every render so voice results always use the latest answers.
+  onFinalRef.current = (finalText: string) => {
+    const qId = getCurrentQuestion()?.id
+    if (!qId) return
+    const isCmd = handleVoiceCommand(finalText, qId)
+    if (!isCmd) {
+      const buf = [...getCurrentBuffer(), finalText]
+      updateAnswer(qId, buf.join('. '), buf)
+      setInterimText('')
+      speak(finalText)
+    }
+  }
+
   const startRecording = () => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SR) { toast.error('Voice not supported. Please use keyboard mode.'); setInputMode('keyboard'); return }
     const recognition = new SR()
-    recognition.lang = 'mr-IN'
+    recognition.lang = lang
     recognition.continuous = true
     recognition.interimResults = true
     recognition.maxAlternatives = 1
@@ -250,18 +320,7 @@ export default function ExamInterface() {
         else interim += event.results[i][0].transcript
       }
       setInterimText(interim)
-      if (final.trim()) {
-        const qId = getCurrentQuestion()?.id
-        if (!qId) return
-        const isCmd = handleVoiceCommand(final.trim(), qId)
-        if (!isCmd) {
-          const buf = [...getCurrentBuffer(), final.trim()]
-          const text = buf.join('. ')
-          updateAnswer(qId, text, buf)
-          setInterimText('')
-          speak(final.trim())
-        }
-      }
+      if (final.trim()) onFinalRef.current(final.trim())
     }
     recognitionRef.current = recognition
     recognition.start()
@@ -277,6 +336,8 @@ export default function ExamInterface() {
 
   const goToQuestion = (idx: number) => {
     stopRecording()
+    readTokenRef.current++
+    setReadingIdx(null)
     setCurrentQ(idx)
     setInterimText('')
     setTimeout(() => {
@@ -427,6 +488,9 @@ export default function ExamInterface() {
             <div className="text-xs font-semibold mb-3" style={{ color: 'rgba(255,255,255,0.4)' }}>🗣️ VOICE COMMANDS</div>
             {[
               ['"erase word" / "शब्द काढ"', 'Remove last word only'],
+              ['"read last sentence"', 'Hear only the last sentence'],
+              ['"read sentence 2"', 'Hear a particular sentence'],
+              ['"sentence by sentence"', 'Hear every sentence one by one'],
               ['"erase line" / "ओळ काढ"', 'Remove last full line'],
               ['"undo" / "रद्द कर"', 'Remove last sentence'],
               ['"clear" / "सगळं काढ"', 'Clear all answer'],
@@ -445,7 +509,8 @@ export default function ExamInterface() {
 
         {/* Answer Panel */}
         <div className="lg:flex-1 flex flex-col gap-4">
-          {/* Mode Toggle */}
+          {/* Mode Toggle + Main Language */}
+          <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-2 p-1 rounded-xl self-start" style={{ background: 'rgba(255,255,255,0.08)' }}>
             {(['voice', 'keyboard'] as const).map(mode => (
               <button key={mode} onClick={() => { setInputMode(mode); if (mode === 'keyboard') stopRecording() }}
@@ -454,6 +519,21 @@ export default function ExamInterface() {
                 {mode === 'voice' ? <Mic size={14} /> : <Keyboard size={14} />}{mode}
               </button>
             ))}
+          </div>
+
+          {/* Main Language */}
+          <label className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm" style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)' }}>
+            <Languages size={16} />
+            <span className="hidden sm:inline">Language</span>
+            <select value={lang} onChange={e => changeLanguage(e.target.value)}
+              aria-label="Main language"
+              className="rounded-lg px-2 py-1 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-400"
+              style={{ background: '#1E3A5F', color: 'white', border: '1px solid rgba(255,255,255,0.2)' }}>
+              {LANGUAGES.map(l => (
+                <option key={l.code} value={l.code} style={{ background: '#0A1628', color: 'white' }}>{l.native} — {l.label}</option>
+              ))}
+            </select>
+          </label>
           </div>
 
           {/* Voice Mode */}
@@ -482,7 +562,21 @@ export default function ExamInterface() {
               <div className="rounded-2xl p-5 flex-1 min-h-40" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
                 <div className="text-xs font-semibold mb-3" style={{ color: 'rgba(255,255,255,0.4)' }}>YOUR ANSWER</div>
                 {answers[q?.id || ''] ? (
-                  <p className="text-white leading-relaxed" style={{ fontSize: '18px' }}>{answers[q?.id || '']}</p>
+                  <>
+                    <p className="text-white leading-relaxed" style={{ fontSize: '18px' }}>
+                      {splitSentences(answers[q?.id || '']).map((sent, i) => (
+                        <span key={i} role="button" tabIndex={0}
+                          onClick={() => readSentenceAt(q?.id || '', i)}
+                          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); readSentenceAt(q?.id || '', i) } }}
+                          aria-label={`Read sentence ${i + 1} aloud`}
+                          className="cursor-pointer rounded px-0.5 transition-all"
+                          style={{ background: readingIdx === i ? 'rgba(37,99,235,0.55)' : 'transparent' }}>
+                          {sent}{' '}
+                        </span>
+                      ))}
+                    </p>
+                    <div className="mt-3 text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>Tap any sentence to hear it</div>
+                  </>
                 ) : (
                   <p className="italic" style={{ color: 'rgba(255,255,255,0.25)', fontSize: '16px' }}>Your spoken answer will appear here...</p>
                 )}
@@ -514,6 +608,12 @@ export default function ExamInterface() {
               aria-label="Clear answer">
               <Trash2 size={16} />Clear
             </button>
+            <button onClick={() => eraseLastWord(q?.id || '')}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm transition-all"
+              style={{ background: 'rgba(249,115,22,0.2)', color: '#FDBA74' }}
+              aria-label="Erase last word">
+              <Eraser size={16} />Erase Word
+            </button>
             <button onClick={() => {
               const buf = [...(sentenceBuffers[q?.id || ''] || [])]
               if (buf.length > 0) { buf.pop(); updateAnswer(q?.id || '', buf.join('. '), buf); speak('Last sentence removed') }
@@ -529,6 +629,26 @@ export default function ExamInterface() {
               aria-label="Read answer aloud">
               <Volume2 size={16} />Read Answer
             </button>
+            <button onClick={() => readSentenceAt(q?.id || '', -1)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm transition-all"
+              style={{ background: 'rgba(37,99,235,0.2)', color: '#93C5FD' }}
+              aria-label="Read last sentence aloud">
+              <Volume2 size={16} />Read Last Sentence
+            </button>
+            <button onClick={() => readAllSentences(q?.id || '')}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm transition-all"
+              style={{ background: 'rgba(37,99,235,0.2)', color: '#93C5FD' }}
+              aria-label="Read answer sentence by sentence">
+              <Volume2 size={16} />Sentence by Sentence
+            </button>
+            {readingIdx !== null && (
+              <button onClick={stopReading}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm transition-all"
+                style={{ background: 'rgba(220,38,38,0.2)', color: '#FCA5A5' }}
+                aria-label="Stop reading">
+                <Square size={16} />Stop
+              </button>
+            )}
           </div>
 
           {/* Navigation */}
